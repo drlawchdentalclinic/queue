@@ -293,7 +293,7 @@
             <div style="margin-top: 20px; font-size: 0.85rem; color: #64748b; background: #f8fafc; padding: 12px; border-radius: 8px;">
                 <strong>系統提示：</strong><br>
                 • 系統將於每日早上 <strong>06:00</strong> 自動重置號碼至 001。<br>
-                • 遲到或緊急病人可使用中間欄位的「手動輸入號碼」直接叫號。
+                • 雲端即時同步，支援手機掃碼遠端查看。
             </div>
         </div>
     </div>
@@ -303,96 +303,94 @@
         <button class="reset-link" onclick="confirmManualReset()">[立即手動重置全部號碼]</button>
     </div>
 
-    <script>
-        // --- State Variables ---
-        let nextTicketNum = 1;       // Next ticket to be issued (starts at 1 -> "001")
-        let currentCalled = "---";   // Currently displayed number at Surgery
-        let waitingQueue = [];       // Array of formatted strings e.g. ["001", "002"]
+    <!-- Firebase SDK & Controller Logic -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-        // Format number to 3 digits (e.g., 1 -> "001")
+        const firebaseConfig = {
+            apiKey: "AIzaSyBq9X-emTOgeDRbW4G2DBgVf2Wrdb6OHUg",
+            authDomain: "dentalclinicqueue.firebaseapp.com",
+            databaseURL: "https://dentalclinicqueue-default-rtdb.firebaseio.com",
+            projectId: "dentalclinicqueue",
+            storageBucket: "dentalclinicqueue.firebasestorage.app",
+            messagingSenderId: "567316034644",
+            appId: "1:567316034644:web:c9842e40fdd25e1e1229c1"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        let nextTicketNum = 1;
+        let currentCalled = "---";
+        let waitingQueue = [];
+
         function formatNumber(num) {
             return String(num).padStart(3, '0');
         }
 
-        // --- Initialization & 6:00 AM Daily Auto-Reset ---
         function getCycleDateKey() {
             const now = new Date();
-            // Shift time back by 6 hours so the "day" rolls over at 06:00 AM
             const shifted = new Date(now.getTime() - (6 * 60 * 60 * 1000));
-            return shifted.toISOString().split('T')[0]; // YYYY-MM-DD of current 6am-to-6am cycle
+            return shifted.toISOString().split('T')[0];
         }
 
-        function checkDailyReset() {
-            const currentCycle = getCycleDateKey();
-            const savedCycle = localStorage.getItem('dentalQueueCycleDate');
+        const queueRef = ref(db, 'queueData');
 
-            if (savedCycle && savedCycle !== currentCycle) {
-                // Past 6:00 AM of a new day -> Auto Reset!
-                resetSystemData();
+        // Listen for live database updates
+        onValue(queueRef, (snapshot) => {
+            const data = snapshot.val();
+            const todayKey = getCycleDateKey();
+
+            if (!data || data.cycleDate !== todayKey) {
+                resetData(todayKey);
+                return;
             }
-            localStorage.setItem('dentalQueueCycleDate', currentCycle);
-        }
 
-        function resetSystemData() {
-            nextTicketNum = 1;
-            currentCalled = "---";
-            waitingQueue = [];
-            localStorage.setItem('dentalQueueCycleDate', getCycleDateKey());
-            saveAndSync();
+            nextTicketNum = data.nextTicketNum || 1;
+            currentCalled = data.currentCalled || "---";
+            waitingQueue = data.waitingQueue || [];
             updateUI();
+        });
+
+        function saveData() {
+            set(queueRef, {
+                cycleDate: getCycleDateKey(),
+                nextTicketNum: nextTicketNum,
+                currentCalled: currentCalled,
+                waitingQueue: waitingQueue,
+                lastUpdated: new Date().toLocaleTimeString('zh-HK', { hour: '2-digit', minute: '2-digit' })
+            });
         }
 
-        function confirmManualReset() {
-            if (confirm("確定要立即重置所有排隊號碼並回到 001 嗎？")) {
-                resetSystemData();
-            }
+        function resetData(todayKey) {
+            set(queueRef, {
+                cycleDate: todayKey,
+                nextTicketNum: 1,
+                currentCalled: "---",
+                waitingQueue: [],
+                lastUpdated: new Date().toLocaleTimeString('zh-HK', { hour: '2-digit', minute: '2-digit' })
+            });
         }
 
-        function loadSavedState() {
-            checkDailyReset();
-            const savedNext = localStorage.getItem('dentalNextTicketNum');
-            const savedCurrent = localStorage.getItem('dentalCurrentNumber');
-            const savedWaiting = localStorage.getItem('dentalWaitingArray');
-
-            if (savedNext) nextTicketNum = parseInt(savedNext, 10);
-            if (savedCurrent) currentCalled = savedCurrent;
-            if (savedWaiting) waitingQueue = JSON.parse(savedWaiting);
-
-            updateUI();
-        }
-
-        // --- Save to LocalStorage (Syncs with status.html) ---
-        function saveAndSync() {
-            localStorage.setItem('dentalNextTicketNum', nextTicketNum);
-            localStorage.setItem('dentalCurrentNumber', currentCalled);
-            localStorage.setItem('dentalWaitingArray', JSON.stringify(waitingQueue));
-            localStorage.setItem('dentalLastUpdated', new Date().toLocaleTimeString('zh-HK', { hour: '2-digit', minute: '2-digit' }));
-        }
-
-        // --- Queue Operations ---
-        function issueTicket() {
-            checkDailyReset();
+        window.issueTicket = function() {
             const ticketStr = formatNumber(nextTicketNum);
             waitingQueue.push(ticketStr);
             nextTicketNum++;
-            saveAndSync();
-            updateUI();
-        }
+            saveData();
+        };
 
-        function callNext() {
-            checkDailyReset();
+        window.callNext = function() {
             if (waitingQueue.length === 0) {
                 alert("目前沒有等候中的號碼！");
                 return;
             }
             currentCalled = waitingQueue.shift();
-            saveAndSync();
-            updateUI();
+            saveData();
             announceNumber(currentCalled);
-        }
+        };
 
-        function manualCall() {
-            checkDailyReset();
+        window.manualCall = function() {
             const inputEl = document.getElementById('manualInput');
             let rawVal = inputEl.value.trim().toUpperCase();
 
@@ -401,12 +399,10 @@
                 return;
             }
 
-            // If pure digits (e.g., "5"), pad to 3 digits ("005")
             if (/^\d+$/.test(rawVal)) {
                 rawVal = formatNumber(parseInt(rawVal, 10));
             }
 
-            // If the number was still sitting in the waiting queue, remove it so it isn't called twice
             const idx = waitingQueue.indexOf(rawVal);
             if (idx !== -1) {
                 waitingQueue.splice(idx, 1);
@@ -414,17 +410,20 @@
 
             currentCalled = rawVal;
             inputEl.value = "";
-            saveAndSync();
-            updateUI();
+            saveData();
             announceNumber(currentCalled);
-        }
+        };
 
-        function announceCurrent() {
-            if (currentCalled === "---") return;
-            announceNumber(currentCalled);
-        }
+        window.announceCurrent = function() {
+            if (currentCalled !== "---") announceNumber(currentCalled);
+        };
 
-        // Voice Announcement (Cantonese / English fallback)
+        window.confirmManualReset = function() {
+            if (confirm("確定要立即重置所有排隊號碼並回到 001 嗎？")) {
+                resetData(getCycleDateKey());
+            }
+        };
+
         function announceNumber(numStr) {
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
@@ -436,7 +435,6 @@
             }
         }
 
-        // --- Update Display & QR Code ---
         function updateUI() {
             const lastIssued = nextTicketNum > 1 ? formatNumber(nextTicketNum - 1) : "---";
             document.getElementById('lastIssuedDisplay').innerText = lastIssued;
@@ -453,32 +451,22 @@
             }
         }
 
-        function generateQRCode() {
-            // Points to status.html in the same folder
-            const statusUrl = window.location.href.replace(/[^/]*$/, 'status.html');
-            document.getElementById('qrCodeImg').src =
-                `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(statusUrl)}`;
-        }
+        // Generate QR code pointing to status.html
+        const statusUrl = window.location.href.replace(/[^/]*$/, 'status.html');
+        document.getElementById('qrCodeImg').src =
+            `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(statusUrl)}`;
 
-        // Live Clock & Automatic 6:00 AM Check every 30 seconds
-        function updateClock() {
+        // Live Clock
+        setInterval(() => {
             const now = new Date();
             document.getElementById('clockDisplay').innerText =
                 now.toLocaleDateString('zh-HK', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' }) +
                 ' ' + now.toLocaleTimeString('zh-HK');
-            checkDailyReset();
-        }
+        }, 1000);
 
-        // Allow pressing Enter in the manual input box
         document.getElementById('manualInput').addEventListener('keypress', function (e) {
             if (e.key === 'Enter') manualCall();
         });
-
-        // Start system
-        loadSavedState();
-        generateQRCode();
-        updateClock();
-        setInterval(updateClock, 1000);
     </script>
 </body>
 </html>

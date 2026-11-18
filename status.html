@@ -105,7 +105,7 @@
         <div class="sub-header">排隊系統 · 手機即時進度查詢</div>
         
         <div class="status-badge">
-            <span class="dot"></span> 即時連線中
+            <span class="dot"></span> 雲端即時連線中
         </div>
 
         <div class="number-label">目前叫號 (請前往 <strong>Surgery</strong>)</div>
@@ -119,27 +119,43 @@
         <div class="update-time" id="lastUpdated"></div>
     </div>
 
-    <script>
-        function refreshStatus() {
-            const current = localStorage.getItem('dentalCurrentNumber') || '---';
-            const waitingRaw = localStorage.getItem('dentalWaitingArray');
-            const updated = localStorage.getItem('dentalLastUpdated');
+    <!-- Firebase SDK & Live Cloud Listener -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-            document.getElementById('displayNumber').innerText = current;
+        const firebaseConfig = {
+            apiKey: "AIzaSyBq9X-emTOgeDRbW4G2DBgVf2Wrdb6OHUg",
+            authDomain: "dentalclinicqueue.firebaseapp.com",
+            databaseURL: "https://dentalclinicqueue-default-rtdb.firebaseio.com",
+            projectId: "dentalclinicqueue",
+            storageBucket: "dentalclinicqueue.firebasestorage.app",
+            messagingSenderId: "567316034644",
+            appId: "1:567316034644:web:c9842e40fdd25e1e1229c1"
+        };
 
-            if (waitingRaw) {
-                const arr = JSON.parse(waitingRaw);
-                document.getElementById('waitingQueue').innerText = arr.length > 0 ? arr.join('、') : '目前無人等候';
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        const queueRef = ref(db, 'queueData');
+
+        // Instantly receive updates whenever index.html changes the queue
+        onValue(queueRef, (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                document.getElementById('displayNumber').innerText = data.currentCalled || '---';
+
+                if (data.waitingQueue && data.waitingQueue.length > 0) {
+                    document.getElementById('waitingQueue').innerText = data.waitingQueue.join('、');
+                } else {
+                    document.getElementById('waitingQueue').innerText = '目前無人等候';
+                }
+
+                if (data.lastUpdated) {
+                    document.getElementById('lastUpdated').innerText = `最後更新時間：${data.lastUpdated}`;
+                }
             }
-
-            if (updated) {
-                document.getElementById('lastUpdated').innerText = `最後更新時間：${updated}`;
-            }
-        }
-
-        // Listen for instant updates from index.html
-        window.addEventListener('storage', refreshStatus);
-        refreshStatus();
+        });
     </script>
 </body>
 </html>
