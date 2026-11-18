@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dr Law CH Dental Clinic - 即時叫號查詢</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f0f4f8;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 92vh;
+            color: #1e293b;
+        }
+        .card {
+            background: #81d8d0;
+            border-radius: 18px;
+            box-shadow: 0 6px 24px rgba(15, 61, 94, 0.09);
+            padding: 32px 24px;
+            width: 100%;
+            max-width: 390px;
+            text-align: center;
+            border: 1px solid #e2e8f0;
+        }
+        .clinic-name {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #0f3d5e;
+            margin-bottom: 4px;
+        }
+        .sub-header {
+            font-size: 0.9rem;
+            color: #64748b;
+            margin-bottom: 20px;
+        }
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            background: #ecfdf5;
+            color: #059669;
+            padding: 5px 14px;
+            border-radius: 999px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            margin-bottom: 22px;
+        }
+        .dot {
+            height: 8px;
+            width: 8px;
+            background-color: #10b981;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 7px;
+            animation: pulse 1.5s infinite;
+        }
+        .number-label {
+            font-size: 1rem;
+            color: #475569;
+            margin-bottom: 6px;
+        }
+        .current-number {
+            font-size: 4.8rem;
+            font-weight: 800;
+            color: #dc2626;
+            margin: 8px 0 24px 0;
+            letter-spacing: 3px;
+            line-height: 1.1;
+        }
+        .waiting-box {
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 14px;
+            font-size: 0.9rem;
+            color: #475569;
+        }
+        .waiting-list {
+            font-weight: 700;
+            color: #0f3d5e;
+            margin-top: 6px;
+            font-size: 1rem;
+            line-height: 1.5;
+        }
+        .update-time {
+            margin-top: 16px;
+            font-size: 0.78rem;
+            color: #94a3b8;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.3; }
+            100% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <div class="clinic-name">Dr Law CH Dental Clinic</div>
+        <div class="sub-header">排隊系統 · 手機即時進度查詢</div>
+        
+        <div class="status-badge">
+            <span class="dot"></span> 即時連線中
+        </div>
+
+        <div class="number-label">目前叫號 (請前往 <strong>Surgery</strong>)</div>
+        <div class="current-number" id="displayNumber">---</div>
+
+        <div class="waiting-box">
+            <div>等候中號碼：</div>
+            <div class="waiting-list" id="waitingQueue">目前無人等候</div>
+        </div>
+
+        <div class="update-time" id="lastUpdated"></div>
+    </div>
+
+    <script>
+        function refreshStatus() {
+            const current = localStorage.getItem('dentalCurrentNumber') || '---';
+            const waitingRaw = localStorage.getItem('dentalWaitingArray');
+            const updated = localStorage.getItem('dentalLastUpdated');
+
+            document.getElementById('displayNumber').innerText = current;
+
+            if (waitingRaw) {
+                const arr = JSON.parse(waitingRaw);
+                document.getElementById('waitingQueue').innerText = arr.length > 0 ? arr.join('、') : '目前無人等候';
+            }
+
+            if (updated) {
+                document.getElementById('lastUpdated').innerText = `最後更新時間：${updated}`;
+            }
+        }
+
+        // Listen for instant updates from index.html
+        window.addEventListener('storage', refreshStatus);
+        refreshStatus();
+    </script>
+</body>
+</html>

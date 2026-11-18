@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dr Law CH Dental Clinic 排隊系統</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f0f4f8;
+            color: #1e293b;
+            padding: 24px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 28px;
+        }
+        .header h1 {
+            font-size: 1.8rem;
+            color: #0f3d5e;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+        .header p {
+            font-size: 0.9rem;
+            color: #64748b;
+            margin-top: 6px;
+        }
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+            width: 100%;
+            max-width: 1100px;
+        }
+        .card {
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 28px 24px;
+            box-shadow: 0 4px 20px rgba(15, 61, 94, 0.07);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            border: 1px solid #e2e8f0;
+        }
+        .card-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #0f3d5e;
+            margin-bottom: 18px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f1f5f9;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .badge {
+            font-size: 0.75rem;
+            background: #e0f2fe;
+            color: #0369a1;
+            padding: 3px 10px;
+            border-radius: 999px;
+            font-weight: 600;
+        }
+        .big-number-box {
+            text-align: center;
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 24px 16px;
+            margin: 12px 0 20px 0;
+            border: 1px solid #e2e8f0;
+        }
+        .sub-label {
+            font-size: 0.95rem;
+            color: #475569;
+            margin-bottom: 6px;
+        }
+        .current-number {
+            font-size: 4.5rem;
+            font-weight: 800;
+            color: #dc2626;
+            line-height: 1.1;
+            letter-spacing: 3px;
+        }
+        .issued-number {
+            font-size: 3.2rem;
+            font-weight: 700;
+            color: #0284c7;
+            line-height: 1.1;
+            letter-spacing: 2px;
+        }
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.05rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .btn-primary {
+            background-color: #0284c7;
+            color: white;
+        }
+        .btn-primary:hover {
+            background-color: #0369a1;
+        }
+        .btn-call {
+            background-color: #059669;
+            color: white;
+            margin-bottom: 10px;
+        }
+        .btn-call:hover {
+            background-color: #047857;
+        }
+        .btn-repeat {
+            background-color: #f1f5f9;
+            color: #334155;
+            border: 1px solid #cbd5e1;
+        }
+        .btn-repeat:hover {
+            background-color: #e2e8f0;
+        }
+        /* Manual Override Section */
+        .override-section {
+            margin-top: 20px;
+            padding-top: 16px;
+            border-top: 1px dashed #cbd5e1;
+        }
+        .override-label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #475569;
+            margin-bottom: 8px;
+            display: block;
+        }
+        .override-group {
+            display: flex;
+            gap: 8px;
+        }
+        .override-input {
+            flex: 1;
+            padding: 10px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 1rem;
+            text-align: center;
+            font-weight: 600;
+        }
+        .btn-override {
+            padding: 10px 16px;
+            background-color: #d97706;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .btn-override:hover {
+            background-color: #b45309;
+        }
+        /* Waiting List & QR */
+        .waiting-list-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            min-height: 60px;
+            align-content: flex-start;
+        }
+        .queue-chip {
+            background: #e0f2fe;
+            color: #0369a1;
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 1.05rem;
+        }
+        .empty-text {
+            color: #94a3b8;
+            font-size: 0.95rem;
+        }
+        .qr-section {
+            margin-top: 22px;
+            padding-top: 16px;
+            border-top: 1px dashed #cbd5e1;
+            text-align: center;
+        }
+        .qr-section p {
+            font-size: 0.85rem;
+            color: #475569;
+            margin-bottom: 10px;
+        }
+        .qr-section img {
+            width: 135px;
+            height: 135px;
+            border: 4px solid #fff;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            border-radius: 10px;
+        }
+        .footer-info {
+            margin-top: 24px;
+            font-size: 0.82rem;
+            color: #64748b;
+            text-align: center;
+        }
+        .reset-link {
+            color: #dc2626;
+            text-decoration: underline;
+            cursor: pointer;
+            margin-left: 10px;
+            background: none;
+            border: none;
+            font-size: 0.82rem;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>Dr Law CH Dental Clinic 排隊系統</h1>
+        <p id="clockDisplay">載入時間中...</p>
+    </div>
+
+    <div class="dashboard">
+        <!-- Card 1: Reception / Ticket Dispenser -->
+        <div class="card">
+            <div>
+                <div class="card-title">
+                    <span>登記取號 (Reception)</span>
+                    <span class="badge">起始號碼 001</span>
+                </div>
+                <div class="big-number-box">
+                    <div class="sub-label">最新發出號碼</div>
+                    <div class="issued-number" id="lastIssuedDisplay">---</div>
+                </div>
+                <button class="btn btn-primary" onclick="issueTicket()">＋ 抽取新號碼牌</button>
+            </div>
+
+            <!-- QR Code for Remote Client Tracking -->
+            <div class="qr-section">
+                <p>📱 掃描 QR Code 用手機即時查看叫號</p>
+                <img id="qrCodeImg" src="" alt="掃描查看排隊進度">
+            </div>
+        </div>
+
+        <!-- Card 2: Surgery Call Display & Controls -->
+        <div class="card">
+            <div>
+                <div class="card-title">
+                    <span>診症室叫號 (Surgery)</span>
+                    <span class="badge">目前叫號</span>
+                </div>
+                <div class="big-number-box">
+                    <div class="sub-label">請以下號碼前往 <strong>Surgery</strong></div>
+                    <div class="current-number" id="currentCalledDisplay">---</div>
+                </div>
+                <button class="btn btn-call" onclick="callNext()">📢 叫下一號 (Next)</button>
+                <button class="btn btn-repeat" onclick="announceCurrent()">🔊 重複廣播目前號碼</button>
+            </div>
+
+            <!-- Manual Override for Latecomers / Emergency -->
+            <div class="override-section">
+                <label class="override-label" for="manualInput">⚠️ 特別插隊 / 遲到補叫 (手動輸入號碼)：</label>
+                <div class="override-group">
+                    <input type="text" id="manualInput" class="override-input" placeholder="例如: 005 或 E01" maxlength="6">
+                    <button class="btn-override" onclick="manualCall()">立即叫號</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card 3: Waiting Queue Overview -->
+        <div class="card">
+            <div>
+                <div class="card-title">
+                    <span>等候名單 (Waiting)</span>
+                    <span class="badge" id="waitingCountBadge">0 人等候</span>
+                </div>
+                <div class="waiting-list-container" id="waitingListContainer">
+                    <span class="empty-text">目前無人等候</span>
+                </div>
+            </div>
+
+            <div style="margin-top: 20px; font-size: 0.85rem; color: #64748b; background: #f8fafc; padding: 12px; border-radius: 8px;">
+                <strong>系統提示：</strong><br>
+                • 系統將於每日早上 <strong>06:00</strong> 自動重置號碼至 001。<br>
+                • 遲到或緊急病人可使用中間欄位的「手動輸入號碼」直接叫號。
+            </div>
+        </div>
+    </div>
+
+    <div class="footer-info">
+        每日 06:00 自動重置排隊系統
+        <button class="reset-link" onclick="confirmManualReset()">[立即手動重置全部號碼]</button>
+    </div>
+
+    <script>
+        // --- State Variables ---
+        let nextTicketNum = 1;       // Next ticket to be issued (starts at 1 -> "001")
+        let currentCalled = "---";   // Currently displayed number at Surgery
+        let waitingQueue = [];       // Array of formatted strings e.g. ["001", "002"]
+
+        // Format number to 3 digits (e.g., 1 -> "001")
+        function formatNumber(num) {
+            return String(num).padStart(3, '0');
+        }
+
+        // --- Initialization & 6:00 AM Daily Auto-Reset ---
+        function getCycleDateKey() {
+            const now = new Date();
+            // Shift time back by 6 hours so the "day" rolls over at 06:00 AM
+            const shifted = new Date(now.getTime() - (6 * 60 * 60 * 1000));
+            return shifted.toISOString().split('T')[0]; // YYYY-MM-DD of current 6am-to-6am cycle
+        }
+
+        function checkDailyReset() {
+            const currentCycle = getCycleDateKey();
+            const savedCycle = localStorage.getItem('dentalQueueCycleDate');
+
+            if (savedCycle && savedCycle !== currentCycle) {
+                // Past 6:00 AM of a new day -> Auto Reset!
+                resetSystemData();
+            }
+            localStorage.setItem('dentalQueueCycleDate', currentCycle);
+        }
+
+        function resetSystemData() {
+            nextTicketNum = 1;
+            currentCalled = "---";
+            waitingQueue = [];
+            localStorage.setItem('dentalQueueCycleDate', getCycleDateKey());
+            saveAndSync();
+            updateUI();
+        }
+
+        function confirmManualReset() {
+            if (confirm("確定要立即重置所有排隊號碼並回到 001 嗎？")) {
+                resetSystemData();
+            }
+        }
+
+        function loadSavedState() {
+            checkDailyReset();
+            const savedNext = localStorage.getItem('dentalNextTicketNum');
+            const savedCurrent = localStorage.getItem('dentalCurrentNumber');
+            const savedWaiting = localStorage.getItem('dentalWaitingArray');
+
+            if (savedNext) nextTicketNum = parseInt(savedNext, 10);
+            if (savedCurrent) currentCalled = savedCurrent;
+            if (savedWaiting) waitingQueue = JSON.parse(savedWaiting);
+
+            updateUI();
+        }
+
+        // --- Save to LocalStorage (Syncs with status.html) ---
+        function saveAndSync() {
+            localStorage.setItem('dentalNextTicketNum', nextTicketNum);
+            localStorage.setItem('dentalCurrentNumber', currentCalled);
+            localStorage.setItem('dentalWaitingArray', JSON.stringify(waitingQueue));
+            localStorage.setItem('dentalLastUpdated', new Date().toLocaleTimeString('zh-HK', { hour: '2-digit', minute: '2-digit' }));
+        }
+
+        // --- Queue Operations ---
+        function issueTicket() {
+            checkDailyReset();
+            const ticketStr = formatNumber(nextTicketNum);
+            waitingQueue.push(ticketStr);
+            nextTicketNum++;
+            saveAndSync();
+            updateUI();
+        }
+
+        function callNext() {
+            checkDailyReset();
+            if (waitingQueue.length === 0) {
+                alert("目前沒有等候中的號碼！");
+                return;
+            }
+            currentCalled = waitingQueue.shift();
+            saveAndSync();
+            updateUI();
+            announceNumber(currentCalled);
+        }
+
+        function manualCall() {
+            checkDailyReset();
+            const inputEl = document.getElementById('manualInput');
+            let rawVal = inputEl.value.trim().toUpperCase();
+
+            if (!rawVal) {
+                alert("請輸入要叫號的號碼（例如 005 或 E01）");
+                return;
+            }
+
+            // If pure digits (e.g., "5"), pad to 3 digits ("005")
+            if (/^\d+$/.test(rawVal)) {
+                rawVal = formatNumber(parseInt(rawVal, 10));
+            }
+
+            // If the number was still sitting in the waiting queue, remove it so it isn't called twice
+            const idx = waitingQueue.indexOf(rawVal);
+            if (idx !== -1) {
+                waitingQueue.splice(idx, 1);
+            }
+
+            currentCalled = rawVal;
+            inputEl.value = "";
+            saveAndSync();
+            updateUI();
+            announceNumber(currentCalled);
+        }
+
+        function announceCurrent() {
+            if (currentCalled === "---") return;
+            announceNumber(currentCalled);
+        }
+
+        // Voice Announcement (Cantonese / English fallback)
+        function announceNumber(numStr) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const spacedNum = numStr.split('').join(' ');
+                const msg = new SpeechSynthesisUtterance(`請 ${spacedNum} 號，前往 Surgery`);
+                msg.lang = 'zh-HK';
+                msg.rate = 0.9;
+                window.speechSynthesis.speak(msg);
+            }
+        }
+
+        // --- Update Display & QR Code ---
+        function updateUI() {
+            const lastIssued = nextTicketNum > 1 ? formatNumber(nextTicketNum - 1) : "---";
+            document.getElementById('lastIssuedDisplay').innerText = lastIssued;
+            document.getElementById('currentCalledDisplay').innerText = currentCalled;
+            document.getElementById('waitingCountBadge').innerText = `${waitingQueue.length} 人等候`;
+
+            const container = document.getElementById('waitingListContainer');
+            if (waitingQueue.length === 0) {
+                container.innerHTML = '<span class="empty-text">目前無人等候</span>';
+            } else {
+                container.innerHTML = waitingQueue
+                    .map(num => `<span class="queue-chip">${num}</span>`)
+                    .join('');
+            }
+        }
+
+        function generateQRCode() {
+            // Points to status.html in the same folder
+            const statusUrl = window.location.href.replace(/[^/]*$/, 'status.html');
+            document.getElementById('qrCodeImg').src =
+                `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(statusUrl)}`;
+        }
+
+        // Live Clock & Automatic 6:00 AM Check every 30 seconds
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('clockDisplay').innerText =
+                now.toLocaleDateString('zh-HK', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' }) +
+                ' ' + now.toLocaleTimeString('zh-HK');
+            checkDailyReset();
+        }
+
+        // Allow pressing Enter in the manual input box
+        document.getElementById('manualInput').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') manualCall();
+        });
+
+        // Start system
+        loadSavedState();
+        generateQRCode();
+        updateClock();
+        setInterval(updateClock, 1000);
+    </script>
+</body>
+</html>
